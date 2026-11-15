@@ -1,0 +1,517 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Diagnostic connection verification document
+    match /test/{docId} {
+      allow get: if true;
+    }
+
+    // --- Core Global Primitives & Helpers ---
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Authoritative Single-Owner Identity Gate (does not require emailVerified)
+    function isAppOwner() {
+      return isSignedIn() && request.auth.uid == 'ZAzbViaemRbjyA4QpHsqOKjzhcu1';
+    }
+
+    function isDocOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidHttpUrl(url) {
+      return url is string && url.size() >= 8 && url.size() <= 2000 && url.matches('^https?://.+');
+    }
+
+    // --- Entity Validation Functions ---
+
+    function isValidUser(data, userId) {
+      return data.keys().hasAll(['id', 'fullName', 'nickname', 'classCohort', 'academicYear', 'email', 'createdAt']) &&
+        data.keys().hasOnly(['id', 'fullName', 'nickname', 'classCohort', 'academicYear', 'email', 'createdAt', 'points', 'photoUrl', 'skills', 'updatedAt']) &&
+        data.id is string && data.id == userId &&
+        data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 100 &&
+        data.nickname is string && data.nickname.size() >= 1 && data.nickname.size() <= 50 &&
+        data.classCohort is string && data.classCohort.size() <= 50 &&
+        data.academicYear is string && data.academicYear.size() <= 50 &&
+        data.email is string && data.email.size() <= 120 &&
+        data.createdAt is timestamp &&
+        (!('points' in data) || (data.points is int && data.points >= 0 && data.points <= 10000000)) &&
+        (!('photoUrl' in data) || isValidHttpUrl(data.photoUrl)) &&
+        (!('skills' in data) || (data.skills is list && data.skills.size() <= 30 && (data.skills.size() == 0 || (data.skills[0] is string && data.skills[0].size() >= 1 && data.skills[0].size() <= 60)))) &&
+        (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
+    function isValidSubmission(data) {
+      return data.keys().hasAll(['title', 'description', 'category', 'submitterId', 'submitterName', 'status', 'createdAt']) &&
+        data.keys().hasOnly([
+          'id', 'submissionKind', 'title', 'description', 'content', 'hub', 'subject',
+          'category', 'coverImageUrl', 'tags', 'websiteUrl', 'sourceUrl', 'resourceFormat',
+          'submitterId', 'submitterName', 'fileUrl', 'fileType', 'status',
+          'reviewedBy', 'reviewedAt', 'decisionNote', 'createdAt', 'updatedAt'
+        ]) &&
+        (!('id' in data) || isValidId(data.id)) &&
+        data.title is string && data.title.size() >= 2 && data.title.size() <= 150 &&
+        data.description is string && data.description.size() >= 5 && data.description.size() <= 4000 &&
+        data.category is string && data.category.size() >= 1 && data.category.size() <= 100 &&
+        data.submitterId is string && isValidId(data.submitterId) &&
+        data.submitterName is string && data.submitterName.size() >= 1 && data.submitterName.size() <= 100 &&
+        data.status is string && data.status in ['pending', 'approved', 'rejected'] &&
+        data.createdAt is timestamp &&
+        (!('submissionKind' in data) || (data.submissionKind in ['course', 'news', 'website', 'community'])) &&
+        (!('content' in data) || (data.content is string && data.content.size() <= 10000)) &&
+        (!('hub' in data) || (data.hub in ['general', 'specialized'])) &&
+        (!('subject' in data) || (data.subject is string && data.subject.size() <= 80)) &&
+        (!('coverImageUrl' in data) || isValidHttpUrl(data.coverImageUrl)) &&
+        (!('tags' in data) || (data.tags is list && data.tags.size() <= 10 && (data.tags.size() == 0 || data.tags[0] is string))) &&
+        (!('websiteUrl' in data) || isValidHttpUrl(data.websiteUrl)) &&
+        (!('sourceUrl' in data) || isValidHttpUrl(data.sourceUrl)) &&
+        (!('resourceFormat' in data) || (data.resourceFormat in ['link', 'document', 'none'])) &&
+        (!('fileUrl' in data) || isValidHttpUrl(data.fileUrl)) &&
+        (!('fileType' in data) || (data.fileType in ['link', 'pdf', 'video', 'doc'])) &&
+        (!('reviewedBy' in data) || data.reviewedBy == 'ZAzbViaemRbjyA4QpHsqOKjzhcu1') &&
+        (!('reviewedAt' in data) || data.reviewedAt is timestamp) &&
+        (!('decisionNote' in data) || (data.decisionNote is string && data.decisionNote.size() <= 1000)) &&
+        (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
+    function isValidRequest(data) {
+      return data.keys().hasAll(['userId', 'userName', 'type', 'subject', 'details', 'status', 'createdAt']) &&
+        data.keys().hasOnly(['id', 'userId', 'userName', 'type', 'subject', 'details', 'status', 'decisionNote', 'reviewedAt', 'reviewedBy', 'createdAt', 'updatedAt']) &&
+        data.userId is string && isValidId(data.userId) &&
+        data.userName is string && data.userName.size() <= 100 &&
+        data.type is string && data.type.size() <= 80 &&
+        data.subject is string && data.subject.size() >= 2 && data.subject.size() <= 150 &&
+        data.details is string && data.details.size() >= 5 && data.details.size() <= 3000 &&
+        data.status is string && data.status in ['pending', 'accepted', 'rejected'] &&
+        data.createdAt is timestamp &&
+        (!('decisionNote' in data) || (data.decisionNote is string && data.decisionNote.size() <= 1000));
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll(['type', 'title', 'message', 'isRead', 'createdAt']) &&
+        data.keys().hasOnly([
+          'id', 'type', 'submissionType', 'submitterName', 'submissionTitle',
+          'submissionStatus', 'title', 'message', 'isRead', 'relatedId', 'reviewPath', 'createdAt'
+        ]) &&
+        data.type in ['submission', 'request', 'system'] &&
+        data.title is string && data.title.size() >= 2 && data.title.size() <= 200 &&
+        data.message is string && data.message.size() <= 1000 &&
+        data.isRead is bool &&
+        data.createdAt is timestamp &&
+        (!('submissionType' in data) || (data.submissionType in ['course', 'news', 'website', 'community'])) &&
+        (!('submitterName' in data) || (data.submitterName is string && data.submitterName.size() <= 100)) &&
+        (!('submissionTitle' in data) || (data.submissionTitle is string && data.submissionTitle.size() <= 150)) &&
+        (!('submissionStatus' in data) || (data.submissionStatus in ['pending', 'approved', 'rejected'])) &&
+        (!('relatedId' in data) || isValidId(data.relatedId)) &&
+        (!('reviewPath' in data) || (data.reviewPath is string && data.reviewPath.size() <= 100));
+    }
+
+    function isValidChallenge(data) {
+      return data.keys().hasAll(['id', 'title', 'subject', 'question', 'attachmentFormat', 'points', 'ownerId', 'status', 'createdAt']) &&
+        data.keys().hasOnly(['id', 'title', 'subject', 'question', 'attachmentFormat', 'attachmentUrl', 'points', 'ownerId', 'status', 'createdAt', 'updatedAt']) &&
+        isValidId(data.id) &&
+        data.title is string && data.title.size() >= 2 && data.title.size() <= 150 &&
+        data.subject is string && data.subject.size() >= 1 && data.subject.size() <= 80 &&
+        data.question is string && data.question.size() >= 5 && data.question.size() <= 5000 &&
+        data.attachmentFormat in ['link', 'gdrive', 'none'] &&
+        (data.attachmentFormat == 'none' ? !('attachmentUrl' in data) : ('attachmentUrl' in data && isValidHttpUrl(data.attachmentUrl))) &&
+        data.points is int && data.points >= 1 && data.points <= 10000 &&
+        data.ownerId == 'ZAzbViaemRbjyA4QpHsqOKjzhcu1' &&
+        data.status == 'published' &&
+        data.createdAt is timestamp &&
+        (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
+    function isValidChallengeAnswer(data) {
+      return data.keys().hasAll(['id', 'challengeId', 'challengeTitle', 'challengeSubject', 'challengePoints', 'studentId', 'studentName', 'answerText', 'status', 'pointsAwarded', 'createdAt']) &&
+        data.keys().hasOnly(['id', 'challengeId', 'challengeTitle', 'challengeSubject', 'challengePoints', 'studentId', 'studentName', 'answerText', 'status', 'pointsAwarded', 'awardedPoints', 'reviewedBy', 'reviewedAt', 'createdAt', 'updatedAt']) &&
+        isValidId(data.id) &&
+        isValidId(data.challengeId) &&
+        data.challengeTitle is string && data.challengeTitle.size() >= 1 && data.challengeTitle.size() <= 150 &&
+        data.challengeSubject is string && data.challengeSubject.size() >= 1 && data.challengeSubject.size() <= 80 &&
+        data.challengePoints is int && data.challengePoints >= 1 && data.challengePoints <= 10000 &&
+        isValidId(data.studentId) &&
+        data.studentName is string && data.studentName.size() >= 1 && data.studentName.size() <= 100 &&
+        data.answerText is string && data.answerText.size() >= 1 && data.answerText.size() <= 5000 &&
+        data.status in ['pending', 'correct', 'incorrect'] &&
+        data.pointsAwarded is bool &&
+        (!('awardedPoints' in data) || (data.awardedPoints is int && data.awardedPoints >= 0 && data.awardedPoints <= 10000)) &&
+        (!('reviewedBy' in data) || data.reviewedBy == 'ZAzbViaemRbjyA4QpHsqOKjzhcu1') &&
+        (!('reviewedAt' in data) || data.reviewedAt is timestamp) &&
+        data.createdAt is timestamp &&
+        (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
+    function isValidChallengeNotification(data) {
+      return data.keys().hasAll(['id', 'userId', 'answerId', 'challengeId', 'challengeTitle', 'outcome', 'pointsEarned', 'title', 'message', 'isRead', 'createdAt']) &&
+        data.keys().hasOnly(['id', 'userId', 'answerId', 'challengeId', 'challengeTitle', 'outcome', 'pointsEarned', 'title', 'message', 'isRead', 'createdAt']) &&
+        isValidId(data.id) &&
+        isValidId(data.userId) &&
+        isValidId(data.answerId) &&
+        isValidId(data.challengeId) &&
+        data.challengeTitle is string && data.challengeTitle.size() >= 1 && data.challengeTitle.size() <= 150 &&
+        data.outcome in ['correct', 'incorrect'] &&
+        data.pointsEarned is int && data.pointsEarned >= 0 && data.pointsEarned <= 10000 &&
+        data.title is string && data.title.size() >= 2 && data.title.size() <= 200 &&
+        data.message is string && data.message.size() >= 2 && data.message.size() <= 1000 &&
+        data.isRead is bool &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidChallengeWinner(data) {
+      return data.keys().hasAll(['id', 'answerId', 'challengeId', 'challengeTitle', 'studentId', 'studentName', 'pointsEarned', 'acceptedAt']) &&
+        data.keys().hasOnly(['id', 'answerId', 'challengeId', 'challengeTitle', 'studentId', 'studentName', 'pointsEarned', 'acceptedAt']) &&
+        isValidId(data.id) &&
+        isValidId(data.answerId) &&
+        isValidId(data.challengeId) &&
+        data.challengeTitle is string && data.challengeTitle.size() >= 1 && data.challengeTitle.size() <= 150 &&
+        isValidId(data.studentId) &&
+        data.studentName is string && data.studentName.size() >= 1 && data.studentName.size() <= 100 &&
+        data.pointsEarned is int && data.pointsEarned >= 1 && data.pointsEarned <= 10000 &&
+        data.acceptedAt is timestamp;
+    }
+
+    function isValidPublicProfile(data, userId) {
+      return data.keys().hasAll(['id', 'username', 'skills', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'username', 'photoUrl', 'skills', 'updatedAt']) &&
+        data.id is string && data.id == userId &&
+        data.username is string && data.username.size() >= 1 && data.username.size() <= 100 &&
+        (!('photoUrl' in data) || isValidHttpUrl(data.photoUrl)) &&
+        data.skills is list && data.skills.size() <= 30 &&
+        (data.skills.size() == 0 || (data.skills[0] is string && data.skills[0].size() >= 1 && data.skills[0].size() <= 60)) &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidStudentNotification(data) {
+      return data.keys().hasAll(['id', 'userId', 'category', 'title', 'message', 'targetPage', 'isRead', 'createdAt']) &&
+        data.keys().hasOnly([
+          'id', 'userId', 'category', 'title', 'message', 'itemTitle',
+          'decision', 'pointsEarned', 'totalPoints', 'targetPage', 'relatedId', 'isRead', 'createdAt'
+        ]) &&
+        isValidId(data.id) &&
+        isValidId(data.userId) &&
+        data.userId != 'ZAzbViaemRbjyA4QpHsqOKjzhcu1' &&
+        data.category in ['submission', 'challenge', 'points', 'achievement'] &&
+        data.title is string && data.title.size() >= 2 && data.title.size() <= 200 &&
+        data.message is string && data.message.size() >= 2 && data.message.size() <= 1000 &&
+        (!('itemTitle' in data) || (data.itemTitle is string && data.itemTitle.size() >= 1 && data.itemTitle.size() <= 150)) &&
+        (!('decision' in data) || (data.decision in ['approved', 'rejected', 'correct', 'incorrect'])) &&
+        (!('pointsEarned' in data) || (data.pointsEarned is int && data.pointsEarned >= 0 && data.pointsEarned <= 10000)) &&
+        (!('totalPoints' in data) || (data.totalPoints is int && data.totalPoints >= 0 && data.totalPoints <= 10000000)) &&
+        data.targetPage in ['academic-hub', 'challenge-hub', 'profile'] &&
+        (!('relatedId' in data) || isValidId(data.relatedId)) &&
+        data.isRead is bool &&
+        data.createdAt is timestamp;
+    }
+
+    // --- 1. User Profiles Collection (/users/{userId}) ---
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isAppOwner() || isDocOwner(userId));
+      allow list: if isAppOwner();
+
+      allow create: if isValidId(userId) &&
+        isValidUser(incoming(), userId) &&
+        incoming().createdAt == request.time && (
+          (isDocOwner(userId) && (!('points' in incoming()) || incoming().points == 0)) ||
+          (isAppOwner() && (!('points' in incoming()) || incoming().points >= 0))
+        );
+
+      allow update: if isValidId(userId) &&
+        isValidUser(incoming(), userId) &&
+        incoming().id == existing().id &&
+        incoming().createdAt == existing().createdAt && (
+          (isDocOwner(userId) && !isAppOwner() &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['photoUrl', 'skills', 'updatedAt']) &&
+            incoming().updatedAt == request.time && (
+              !('points' in incoming()) ? !('points' in existing()) :
+              (('points' in existing() && incoming().points == existing().points) || (!('points' in existing()) && incoming().points == 0))
+            )
+          ) ||
+          (isAppOwner() && (
+            isDocOwner(userId) ||
+            (incoming().diff(existing()).affectedKeys().hasOnly(['points', 'updatedAt']) &&
+              'points' in incoming() &&
+              incoming().points >= (('points' in existing()) ? existing().points : 0))
+          ))
+        );
+
+      allow delete: if isAppOwner();
+    }
+
+    // --- 2. Academic Hub Submissions & Published Content (/submissions/{submissionId}) ---
+    match /submissions/{submissionId} {
+      allow get: if isValidId(submissionId) && (
+        isAppOwner() ||
+        existing().status == 'approved' ||
+        (isSignedIn() && existing().submitterId == request.auth.uid)
+      );
+
+      allow list: if isAppOwner() ||
+        existing().status == 'approved' ||
+        (isSignedIn() && existing().submitterId == request.auth.uid);
+
+      // Owner can create with status 'pending' or 'approved' (even if emailVerified is false).
+      // Regular members MUST create with status == 'pending' and cannot supply review fields.
+      allow create: if isValidId(submissionId) && isSignedIn() &&
+        isValidSubmission(incoming()) &&
+        (!('id' in incoming()) || incoming().id == submissionId) &&
+        incoming().submitterId == request.auth.uid &&
+        incoming().createdAt == request.time && (
+          (isAppOwner() &&
+            incoming().status in ['pending', 'approved'] &&
+            (!('reviewedAt' in incoming()) || incoming().reviewedAt == request.time)) ||
+          (!isAppOwner() &&
+            incoming().status == 'pending' &&
+            !('reviewedBy' in incoming()) &&
+            !('reviewedAt' in incoming()) &&
+            !('decisionNote' in incoming()))
+        );
+
+      // Only the designated Owner can approve/reject or modify review fields.
+      // Regular members can only update content fields on their own pending submissions.
+      allow update: if isValidId(submissionId) &&
+        isValidSubmission(incoming()) &&
+        incoming().submitterId == existing().submitterId &&
+        incoming().createdAt == existing().createdAt && (
+          (isAppOwner() &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'reviewedBy', 'reviewedAt', 'decisionNote', 'updatedAt'])) ||
+          (!isAppOwner() && isSignedIn() && existing().submitterId == request.auth.uid &&
+            existing().status == 'pending' && incoming().status == 'pending' &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'title', 'description', 'content', 'category', 'coverImageUrl', 'tags',
+              'websiteUrl', 'sourceUrl', 'resourceFormat', 'fileUrl', 'fileType', 'updatedAt'
+            ]))
+        );
+
+      allow delete: if isValidId(submissionId) && (
+        isAppOwner() ||
+        (isSignedIn() && existing().submitterId == request.auth.uid && existing().status == 'pending')
+      );
+    }
+
+    // --- 3. Member Requests Collection (/requests/{requestId}) ---
+    match /requests/{requestId} {
+      allow get: if isValidId(requestId) && (
+        isAppOwner() ||
+        (isSignedIn() && existing().userId == request.auth.uid)
+      );
+
+      allow list: if isAppOwner() || (
+        isSignedIn() && existing().userId == request.auth.uid
+      );
+
+      allow create: if isValidId(requestId) && isSignedIn() &&
+        isValidRequest(incoming()) &&
+        incoming().userId == request.auth.uid &&
+        incoming().status == 'pending' &&
+        incoming().createdAt == request.time;
+
+      allow update: if isValidId(requestId) && isAppOwner() &&
+        isValidRequest(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'reviewedBy', 'reviewedAt', 'decisionNote', 'updatedAt']);
+
+      allow delete: if isValidId(requestId) && isAppOwner();
+    }
+
+    // --- 4. Owner Notifications Center (/notifications/{notificationId}) ---
+    match /notifications/{notificationId} {
+      allow get, delete: if isValidId(notificationId) && isAppOwner();
+      allow list: if isAppOwner();
+
+      allow update: if isValidId(notificationId) && isAppOwner() &&
+        isValidNotification(incoming()) &&
+        incoming().createdAt == existing().createdAt;
+
+      allow create: if isValidId(notificationId) && isSignedIn() &&
+        isValidNotification(incoming()) &&
+        incoming().createdAt == request.time && (
+          isAppOwner() || (
+            incoming().type == 'submission' &&
+            incoming().submissionStatus == 'pending' &&
+            incoming().isRead == false &&
+            'relatedId' in incoming() &&
+            notificationId == ('sub_' + incoming().relatedId) &&
+            exists(/databases/$(database)/documents/submissions/$(incoming().relatedId)) &&
+            get(/databases/$(database)/documents/submissions/$(incoming().relatedId)).data.submitterId == request.auth.uid
+          )
+        );
+    }
+
+    // --- 5. Challenge Hub Challenges (/challenges/{challengeId}) ---
+    match /challenges/{challengeId} {
+      allow get: if isValidId(challengeId);
+      allow list: if true;
+
+      allow create: if isValidId(challengeId) && isAppOwner() &&
+        isValidChallenge(incoming()) &&
+        incoming().id == challengeId &&
+        incoming().createdAt == request.time;
+
+      allow update: if isValidId(challengeId) && isAppOwner() &&
+        isValidChallenge(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt;
+
+      allow delete: if isValidId(challengeId) && isAppOwner();
+    }
+
+    // --- 6. Challenge Hub Student Answers (/challengeAnswers/{answerId}) ---
+    match /challengeAnswers/{answerId} {
+      allow get: if isValidId(answerId) && (
+        isAppOwner() ||
+        (isSignedIn() && existing().studentId == request.auth.uid)
+      );
+
+      allow list: if isAppOwner() ||
+        (isSignedIn() && existing().studentId == request.auth.uid);
+
+      // Students (never Owner) can create pending answers for themselves only
+      allow create: if isValidId(answerId) && isSignedIn() && !isAppOwner() &&
+        isValidChallengeAnswer(incoming()) &&
+        incoming().id == answerId &&
+        incoming().studentId == request.auth.uid &&
+        incoming().status == 'pending' &&
+        incoming().pointsAwarded == false &&
+        !('awardedPoints' in incoming()) &&
+        !('reviewedBy' in incoming()) &&
+        !('reviewedAt' in incoming()) &&
+        incoming().createdAt == request.time &&
+        exists(/databases/$(database)/documents/challenges/$(incoming().challengeId));
+
+      // Only the Owner can review pending answers once (prevents duplicate point awards)
+      allow update: if isValidId(answerId) && isAppOwner() &&
+        isValidChallengeAnswer(incoming()) &&
+        existing().status == 'pending' &&
+        existing().pointsAwarded == false &&
+        incoming().status in ['correct', 'incorrect'] &&
+        incoming().id == existing().id &&
+        incoming().challengeId == existing().challengeId &&
+        incoming().studentId == existing().studentId &&
+        incoming().answerText == existing().answerText &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().reviewedBy == 'ZAzbViaemRbjyA4QpHsqOKjzhcu1' &&
+        incoming().reviewedAt == request.time && (
+          (incoming().status == 'correct' &&
+            incoming().pointsAwarded == true &&
+            'awardedPoints' in incoming() &&
+            incoming().awardedPoints > 0) ||
+          (incoming().status == 'incorrect' &&
+            incoming().pointsAwarded == false &&
+            'awardedPoints' in incoming() &&
+            incoming().awardedPoints == 0)
+        );
+
+      allow delete: if isValidId(answerId) && isAppOwner();
+    }
+
+    // --- 7. Challenge Hub Student Notifications (/challengeNotifications/{notificationId}) ---
+    match /challengeNotifications/{notificationId} {
+      allow get: if isValidId(notificationId) && (
+        isAppOwner() ||
+        (isSignedIn() && existing().userId == request.auth.uid)
+      );
+
+      allow list: if isAppOwner() ||
+        (isSignedIn() && existing().userId == request.auth.uid);
+
+      allow create: if isValidId(notificationId) && isAppOwner() &&
+        isValidChallengeNotification(incoming()) &&
+        incoming().id == notificationId &&
+        incoming().createdAt == request.time;
+
+      allow update: if isValidId(notificationId) &&
+        (isAppOwner() || (isSignedIn() && existing().userId == request.auth.uid)) &&
+        isValidChallengeNotification(incoming()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['isRead']);
+
+      allow delete: if isValidId(notificationId) && isAppOwner();
+    }
+
+    // --- 8. Challenge Hub Winners (/challengeWinners/{winnerId}) ---
+    match /challengeWinners/{winnerId} {
+      allow get: if isValidId(winnerId);
+      allow list: if true;
+
+      allow create: if isValidId(winnerId) && isAppOwner() &&
+        isValidChallengeWinner(incoming()) &&
+        incoming().id == winnerId &&
+        incoming().acceptedAt == request.time;
+
+      allow update, delete: if isValidId(winnerId) && isAppOwner();
+    }
+
+    // --- 9. Public Student Skills & Profile Directory (/publicProfiles/{userId}) ---
+    // Strictly isolated from PII (no email, password, auth tokens, or private user fields)
+    match /publicProfiles/{userId} {
+      allow get: if isValidId(userId) && isSignedIn();
+      allow list: if isSignedIn() && existing().username is string && existing().id is string;
+
+      allow create: if isValidId(userId) && isDocOwner(userId) &&
+        isValidPublicProfile(incoming(), userId) &&
+        incoming().updatedAt == request.time;
+
+      allow update: if isValidId(userId) && isDocOwner(userId) &&
+        isValidPublicProfile(incoming(), userId) &&
+        incoming().id == existing().id &&
+        incoming().updatedAt == request.time;
+
+      allow delete: if isValidId(userId) && (isDocOwner(userId) || isAppOwner());
+    }
+
+    // --- 10. Student-Only Notifications Center (/studentNotifications/{notificationId}) ---
+    // Strictly scoped to non-Owner students; students can ONLY read their own and mark isRead.
+    match /studentNotifications/{notificationId} {
+      allow get: if isValidId(notificationId) && (
+        isAppOwner() ||
+        (isSignedIn() && !isAppOwner() && existing().userId == request.auth.uid)
+      );
+
+      allow list: if isAppOwner() ||
+        (isSignedIn() && !isAppOwner() && existing().userId == request.auth.uid);
+
+      allow create: if isValidId(notificationId) && isAppOwner() &&
+        isValidStudentNotification(incoming()) &&
+        incoming().id == notificationId &&
+        incoming().createdAt == request.time;
+
+      allow update: if isValidId(notificationId) &&
+        isValidStudentNotification(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt && (
+          isAppOwner() || (
+            isSignedIn() && !isAppOwner() &&
+            existing().userId == request.auth.uid &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['isRead']) &&
+            incoming().isRead is bool
+          )
+        );
+
+      allow delete: if isValidId(notificationId) && isAppOwner();
+    }
+  }
+}

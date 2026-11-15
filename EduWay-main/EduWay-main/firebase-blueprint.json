@@ -1,0 +1,443 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Student profile registered on the Eduway educational platform.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Firebase Auth user identifier (UID)."
+        },
+        "fullName": {
+          "type": "string",
+          "description": "The student's full legal name."
+        },
+        "nickname": {
+          "type": "string",
+          "description": "The student's chosen cohort discussion name."
+        },
+        "classCohort": {
+          "type": "string",
+          "description": "The assigned class cohort, e.g. Wheeler 1 to Wheeler 4."
+        },
+        "academicYear": {
+          "type": "string",
+          "description": "The enrolled academic year, e.g. 2026 – 2027."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The student's authenticated email address."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Server timestamp indicating when the account record was created."
+        },
+        "points": {
+          "type": "integer",
+          "description": "Cumulative Challenge Hub points earned by the student."
+        },
+        "photoUrl": {
+          "type": "string",
+          "description": "Optional HTTP/HTTPS profile picture URL."
+        },
+        "skills": {
+          "type": "array",
+          "description": "Student-entered list of skills (up to 30)."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Server timestamp indicating when the account record was last updated."
+        }
+      },
+      "required": ["id", "fullName", "nickname", "classCohort", "academicYear", "email", "createdAt"]
+    },
+    "Submission": {
+      "title": "Submission",
+      "description": "Academic Hub course, news article, useful website, or community question undergoing moderation or published.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the submission document."
+        },
+        "submissionKind": {
+          "type": "string",
+          "enum": ["course", "news", "website", "community"],
+          "description": "Type of Academic Hub contribution."
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the course, news item, website, or community question."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed summary, question details, or description."
+        },
+        "content": {
+          "type": "string",
+          "description": "Extended body content for news summaries."
+        },
+        "hub": {
+          "type": "string",
+          "enum": ["general", "specialized"],
+          "description": "Separated hub designation for courses."
+        },
+        "subject": {
+          "type": "string",
+          "description": "Subject ID within General Hub or Specialized Hub."
+        },
+        "category": {
+          "type": "string",
+          "description": "Subject discipline or category label."
+        },
+        "coverImageUrl": {
+          "type": "string",
+          "description": "Optional HTTP/HTTPS cover image URL."
+        },
+        "tags": {
+          "type": "array",
+          "description": "Up to 10 topic tags."
+        },
+        "websiteUrl": {
+          "type": "string",
+          "description": "Clickable HTTP/HTTPS URL for useful website entries."
+        },
+        "sourceUrl": {
+          "type": "string",
+          "description": "Optional HTTP/HTTPS source link for news entries."
+        },
+        "resourceFormat": {
+          "type": "string",
+          "enum": ["link", "document", "none"],
+          "description": "Attachment format selected by the submitter."
+        },
+        "submitterId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the author."
+        },
+        "submitterName": {
+          "type": "string",
+          "description": "Public display name of the author."
+        },
+        "fileUrl": {
+          "type": "string",
+          "description": "External HTTP/HTTPS reference link to the document, video, or resource."
+        },
+        "fileType": {
+          "type": "string",
+          "enum": ["link", "pdf", "video", "doc"],
+          "description": "Media type classification."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "approved", "rejected"],
+          "description": "Current moderation state."
+        },
+        "reviewedBy": {
+          "type": "string",
+          "description": "UID of the reviewing Owner authority."
+        },
+        "reviewedAt": {
+          "type": "string",
+          "description": "Timestamp when the review decision was reached."
+        },
+        "decisionNote": {
+          "type": "string",
+          "description": "Feedback or explanation accompanying the review decision."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Server timestamp when the submission was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Server timestamp when the submission was updated."
+        }
+      },
+      "required": ["title", "category", "submitterId", "submitterName", "status", "createdAt"]
+    },
+    "MemberRequest": {
+      "title": "MemberRequest",
+      "description": "Formal administrative inquiry, cohort transfer, or curriculum access request submitted by a student.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the member request."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the requesting student."
+        },
+        "userName": {
+          "type": "string",
+          "description": "Full name of the requesting student."
+        },
+        "type": {
+          "type": "string",
+          "description": "Request classification category."
+        },
+        "subject": {
+          "type": "string",
+          "description": "Brief headline or summary of the request."
+        },
+        "details": {
+          "type": "string",
+          "description": "Comprehensive explanation of the student's request."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "accepted", "rejected"],
+          "description": "Current processing state."
+        },
+        "decisionNote": {
+          "type": "string",
+          "description": "Owner explanation or remarks regarding the decision."
+        },
+        "reviewedAt": {
+          "type": "string",
+          "description": "Timestamp when the request was processed."
+        },
+        "reviewedBy": {
+          "type": "string",
+          "description": "UID of the reviewing authority."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the request was initiated."
+        }
+      },
+      "required": ["userId", "userName", "type", "subject", "details", "status", "createdAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Audit and submission alerts for the designated Owner.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the notification (sub_{submissionId} for submissions)."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["submission", "request", "system"],
+          "description": "Event source."
+        },
+        "submissionType": {
+          "type": "string",
+          "enum": ["course", "news", "website", "community"],
+          "description": "Submission type when type is submission."
+        },
+        "submitterName": {
+          "type": "string",
+          "description": "Public name of the submitting user."
+        },
+        "submissionTitle": {
+          "type": "string",
+          "description": "Title of the submitted item."
+        },
+        "submissionStatus": {
+          "type": "string",
+          "enum": ["pending", "approved", "rejected"],
+          "description": "Current approval state of the linked submission."
+        },
+        "title": {
+          "type": "string",
+          "description": "Notification headline."
+        },
+        "message": {
+          "type": "string",
+          "description": "Contextual description of the event."
+        },
+        "isRead": {
+          "type": "boolean",
+          "description": "Whether the alert has been acknowledged."
+        },
+        "relatedId": {
+          "type": "string",
+          "description": "Associated submission or request document ID."
+        },
+        "reviewPath": {
+          "type": "string",
+          "description": "Direct Owner review target identifier."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Server timestamp when the alert was triggered."
+        }
+      },
+      "required": ["type", "title", "message", "isRead", "createdAt"]
+    },
+    "Challenge": {
+      "title": "Challenge",
+      "description": "Educational challenge published by the Owner on Challenge Hub.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Challenge document ID." },
+        "title": { "type": "string", "description": "Challenge Name." },
+        "subject": { "type": "string", "description": "Subject written manually by Owner." },
+        "question": { "type": "string", "description": "Challenge question prompt." },
+        "attachmentFormat": {
+          "type": "string",
+          "enum": ["link", "gdrive", "none"],
+          "description": "Optional attachment format."
+        },
+        "attachmentUrl": { "type": "string", "description": "Optional HTTP/HTTPS resource or Google Drive URL." },
+        "points": { "type": "integer", "description": "Points awarded upon accepted solution." },
+        "ownerId": { "type": "string", "description": "Authoritative Owner UID." },
+        "status": { "type": "string", "enum": ["published"], "description": "Challenge publication status." },
+        "createdAt": { "type": "string", "description": "Server timestamp when published." },
+        "updatedAt": { "type": "string", "description": "Server timestamp when updated." }
+      },
+      "required": ["id", "title", "subject", "question", "attachmentFormat", "points", "ownerId", "status", "createdAt"]
+    },
+    "ChallengeAnswer": {
+      "title": "ChallengeAnswer",
+      "description": "Student-submitted answer awaiting or having received manual Owner review.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Answer submission ID." },
+        "challengeId": { "type": "string", "description": "Target challenge ID." },
+        "challengeTitle": { "type": "string", "description": "Challenge Name at time of submission." },
+        "challengeSubject": { "type": "string", "description": "Challenge Subject at time of submission." },
+        "challengePoints": { "type": "integer", "description": "Challenge points snapshot." },
+        "studentId": { "type": "string", "description": "Firebase Auth UID of submitting student." },
+        "studentName": { "type": "string", "description": "Account name of submitting student." },
+        "answerText": { "type": "string", "description": "Student's submitted answer." },
+        "status": { "type": "string", "enum": ["pending", "correct", "incorrect"], "description": "Manual Owner review state." },
+        "pointsAwarded": { "type": "boolean", "description": "Guards against duplicate point awards." },
+        "awardedPoints": { "type": "integer", "description": "Authoritative points awarded upon review." },
+        "reviewedBy": { "type": "string", "description": "Reviewing Owner UID." },
+        "reviewedAt": { "type": "string", "description": "Server timestamp when reviewed." },
+        "createdAt": { "type": "string", "description": "Server timestamp when submitted." },
+        "updatedAt": { "type": "string", "description": "Server timestamp when updated." }
+      },
+      "required": ["id", "challengeId", "challengeTitle", "challengeSubject", "challengePoints", "studentId", "studentName", "answerText", "status", "pointsAwarded", "createdAt"]
+    },
+    "ChallengeNotification": {
+      "title": "ChallengeNotification",
+      "description": "Student-scoped in-app notification for Challenge Hub answer review outcomes.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Deterministic notification ID (ans_{answerId})." },
+        "userId": { "type": "string", "description": "Target student UID." },
+        "answerId": { "type": "string", "description": "Reviewed answer document ID." },
+        "challengeId": { "type": "string", "description": "Challenge ID." },
+        "challengeTitle": { "type": "string", "description": "Challenge Name." },
+        "outcome": { "type": "string", "enum": ["correct", "incorrect"], "description": "Review result." },
+        "pointsEarned": { "type": "integer", "description": "Points earned (0 when incorrect)." },
+        "title": { "type": "string", "description": "Notification headline." },
+        "message": { "type": "string", "description": "Notification detail text." },
+        "isRead": { "type": "boolean", "description": "Whether student acknowledged notification." },
+        "createdAt": { "type": "string", "description": "Server timestamp when notification was created." }
+      },
+      "required": ["id", "userId", "answerId", "challengeId", "challengeTitle", "outcome", "pointsEarned", "title", "message", "isRead", "createdAt"]
+    },
+    "ChallengeWinner": {
+      "title": "ChallengeWinner",
+      "description": "Verified winner record created atomically when Owner marks a challenge answer correct.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Winner record ID matching accepted answerId." },
+        "answerId": { "type": "string", "description": "Accepted answer submission ID." },
+        "challengeId": { "type": "string", "description": "Challenge ID." },
+        "challengeTitle": { "type": "string", "description": "Challenge Name." },
+        "studentId": { "type": "string", "description": "Winning student UID." },
+        "studentName": { "type": "string", "description": "Winning student account name." },
+        "pointsEarned": { "type": "integer", "description": "Points earned for this win." },
+        "acceptedAt": { "type": "string", "description": "Server timestamp when accepted by Owner." }
+      },
+      "required": ["id", "answerId", "challengeId", "challengeTitle", "studentId", "studentName", "pointsEarned", "acceptedAt"]
+    },
+    "PublicProfile": {
+      "title": "PublicProfile",
+      "description": "PII-free publicly shared student username, avatar URL, and skills for Explore Other Students' Skills.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Firebase Auth UID matching the student." },
+        "username": { "type": "string", "description": "Public student username." },
+        "photoUrl": { "type": "string", "description": "Optional HTTP/HTTPS profile picture URL." },
+        "skills": { "type": "array", "description": "Publicly shared skills array (up to 30)." },
+        "updatedAt": { "type": "string", "description": "Server timestamp when public profile was updated." }
+      },
+      "required": ["id", "username", "skills", "updatedAt"]
+    },
+    "StudentNotification": {
+      "title": "StudentNotification",
+      "description": "Student-only notification records for submission decisions, challenge reviews, points earned, and unlocked achievements.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Deterministic student notification ID." },
+        "userId": { "type": "string", "description": "Recipient student Firebase Auth UID (never Owner)." },
+        "category": {
+          "type": "string",
+          "enum": ["submission", "challenge", "points", "achievement"],
+          "description": "Notification category."
+        },
+        "title": { "type": "string", "description": "Short notification headline." },
+        "message": { "type": "string", "description": "Detailed notification description." },
+        "itemTitle": { "type": "string", "description": "Related course, resource, question, or challenge title." },
+        "decision": {
+          "type": "string",
+          "enum": ["approved", "rejected", "correct", "incorrect"],
+          "description": "Moderation or challenge review outcome."
+        },
+        "pointsEarned": { "type": "integer", "description": "Points earned in this event." },
+        "totalPoints": { "type": "integer", "description": "Student's updated total point balance." },
+        "targetPage": {
+          "type": "string",
+          "enum": ["academic-hub", "challenge-hub", "profile"],
+          "description": "Target page route when notification is clicked."
+        },
+        "relatedId": { "type": "string", "description": "Related submission or challenge document ID." },
+        "isRead": { "type": "boolean", "description": "Whether the student marked this notification as read." },
+        "createdAt": { "type": "string", "description": "Server timestamp when created." }
+      },
+      "required": ["id", "userId", "category", "title", "message", "targetPage", "isRead", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User account document indexed by Firebase Auth UID."
+    },
+    "/submissions/{submissionId}": {
+      "schema": "Submission",
+      "description": "Academic Hub submissions and approved public curriculum/news/websites/questions."
+    },
+    "/requests/{requestId}": {
+      "schema": "MemberRequest",
+      "description": "Administrative requests and inquiries submitted by platform members."
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Owner-only notifications for new member submissions and administrative events."
+    },
+    "/challenges/{challengeId}": {
+      "schema": "Challenge",
+      "description": "Published Challenge Hub challenges created by the Owner."
+    },
+    "/challengeAnswers/{answerId}": {
+      "schema": "ChallengeAnswer",
+      "description": "Student answer submissions and Owner review decisions."
+    },
+    "/challengeNotifications/{notificationId}": {
+      "schema": "ChallengeNotification",
+      "description": "Student-scoped Challenge Hub notifications for reviewed answers."
+    },
+    "/challengeWinners/{winnerId}": {
+      "schema": "ChallengeWinner",
+      "description": "Verified Challenge Hub winners created upon Owner approval."
+    },
+    "/publicProfiles/{userId}": {
+      "schema": "PublicProfile",
+      "description": "PII-isolated public student skills directory readable by authenticated students."
+    },
+    "/studentNotifications/{notificationId}": {
+      "schema": "StudentNotification",
+      "description": "Student-only notification center events (excluding the Owner account)."
+    }
+  }
+}

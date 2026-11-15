@@ -1,0 +1,6 @@
+{
+  "name": "Wheeler Tech Academy - Sign Up",
+  "description": "A modern, premium sign up interface for a technology-focused educational platform with clean vector illustrations and accessible registration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
